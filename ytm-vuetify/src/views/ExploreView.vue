@@ -3,7 +3,7 @@
     class="mx-auto"
     elevation="8"
 >
-
+<v-banner><span style="font-size:20pt;">Explore</span></v-banner>
 <v-slide-group
       v-model="model"
       class="pa-4"
@@ -32,6 +32,37 @@
     </v-slide-item>
 </v-slide-group>
 
+<div v-if="ifLogin">
+<v-banner><span style="font-size:20pt;">User's Library</span></v-banner>
+<v-slide-group
+      v-model="model"
+      class="pa-4"
+      active-class="success"
+      show-arrows
+    >
+    <v-slide-item
+        v-for="album in albums"
+        :key="album.pid"
+        class="album"
+    >
+        <v-card
+            class="ma-4"
+            height="300"
+            width="250"
+            @click="openAlbum(album)"
+        >
+            <div class="text-center text-truncate" style="margin:auto;">{{ album.name }}</div>
+            <v-card-actions class="d-flex flex-column align-center">
+                <v-img :src="`http://127.0.0.1:3000/image/${album.pid}.jpg`" alt="Album cover" height="200" width="200"/>
+                <v-btn @click.stop="playAlbum(album,0)" style="margin-top:15px;">
+                    <svg-icon type="mdi" :path="playIconPath"></svg-icon>
+                </v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-slide-item>
+</v-slide-group>
+</div>
+
 </v-sheet>
 </template>
 
@@ -42,6 +73,12 @@ import { mdiPlay, mdiPause } from '@mdi/js';
 
 export default {
   name: 'ExploreView',
+
+  computed: {
+    ifLogin() {
+      return this.$store.state.loginFlag;
+    },
+  },
 
   components: {
     SvgIcon,

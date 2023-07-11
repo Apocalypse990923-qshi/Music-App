@@ -72,7 +72,7 @@ export default {
 
   computed: {
     user() {
-      return this.$store.state.user;
+      return this.$store.state.user.name;
     },
     loginFlag() {
       return this.$store.state.loginFlag;

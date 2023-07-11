@@ -16,6 +16,67 @@ const router = new Router();
 app.use(bodyParser());
 app.use(cors());
 
+router.put('/playlist', async ctx => {
+	const user = ctx.query.user_id;
+	const pid = ctx.query.pid;
+	const UserLibrary = mongoose.model(user, UserLibrarySchema);
+	const playlist = await PlaylistIndex.findOne({ pid: pid });
+	if (playlist) {
+		if(await UserLibrary.findOne({ id: pid })){
+			ctx.status = 500;
+	        ctx.body = 'Playlist/album already exist in User Library';
+			return;
+		}
+		const data = {
+			type: playlist.type,
+			id: pid,
+			added_date: new Date().toISOString().substring(0,10),
+		};
+		const newUserLibrary = new UserLibrary(data);
+		await newUserLibrary.save().then(() => console.log('Playlist/album saved in UserLibrary')).catch(err => console.error('Error:', err));
+		ctx.body = { status: 0, msg: "Saved playlist/album in User Library Success" };
+    } else {
+        ctx.status = 404;
+        ctx.body = 'No playlist/album found';
+    }
+});
+
+router.put('/track', async ctx => {
+	const user = ctx.query.user_id;
+	const pid = ctx.query.pid;
+	const tid = ctx.query.tid;
+	const UserLibrary = mongoose.model(user, UserLibrarySchema);
+	const playlist = await PlaylistIndex.findOne({ pid: pid });
+	if (playlist) {
+		if(await UserLibrary.findOne({ id: pid })){
+			const SinglePlaylist = mongoose.model(playlist.pid, SinglePlaylistSchema);
+			const track = await SinglePlaylist.findOne({ tid: tid });
+			if(!track){
+				const new_track = {
+			        tid: tid,
+					order: playlist.added
+			    };
+				const NewTrack = new SinglePlaylist(new_track);
+				NewTrack.save().then(() => console.log('New track saved in playlist')).catch(err => console.error('Error:', err));
+				playlist.added = playlist.added + 1;
+				playlist.save().then(() => console.log('Playlist updated')).catch(err => console.error('Error:', err));
+				ctx.body = { status: 0, msg: "Saved track in playlist Success" };
+			}else{
+				ctx.status = 500;
+		        ctx.body = 'Track already exist in playlist';
+				return;
+	        }
+		}else{
+			ctx.status = 500;
+	        ctx.body = 'Playlist does not exist in User Library';
+			return;
+		}
+	} else {
+		ctx.status = 404;
+        ctx.body = 'No playlist found';
+	}
+});
+
 router.get('/stream/:track_id', async (ctx) => {
   const trackId = ctx.params.track_id;
   const trackPath = await getTrackPath(trackId);
@@ -180,7 +241,14 @@ router.get('/track/:track_id', async (ctx) => {
 router.get('/image/:image', async (ctx) => {
 	const filepath = path.join('./Library/cover',ctx.params.image);
 	if(!fs.existsSync(filepath)){
-		ctx.throw(404, 'Cover image not found');
+		// ctx.throw(404, 'Cover image not found');
+		const deault_filepath = path.join('./Library/cover','default_album_image.jpg');
+		ctx.set({
+			'Content-Length': fs.statSync(deault_filepath).size,
+	        'Content-Type': 'image/jpeg',
+		});
+	    ctx.body = fs.createReadStream(deault_filepath);
+		return;
 	}
 	const stat = fs.statSync(filepath);
   	const fileSize = stat.size;
@@ -222,7 +290,7 @@ router.post('/login', async ctx => {
     }
   });
 
-  router.post('/signup', async ctx => {
+router.post('/signup', async ctx => {
     const { user, secret } = ctx.request.body;
 
     const existingUser = await User.findOne({ name: user });
