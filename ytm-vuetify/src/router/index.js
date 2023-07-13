@@ -3,6 +3,7 @@ import VueRouter from 'vue-router';
 // import HomeView from '../views/HomeView.vue';
 import ExploreView from '../views/ExploreView.vue';
 import LoginView from '../views/LoginView.vue';
+import Library from '../views/LibraryView.vue';
 
 Vue.use(VueRouter);
 
@@ -33,6 +34,12 @@ const routes = [
     path: '/login',
     name: 'login',
     component: LoginView,
+  },
+  {
+    path: '/library/:id',
+    name: 'library',
+    component: Library,
+    props: true,
   },
 ];
 

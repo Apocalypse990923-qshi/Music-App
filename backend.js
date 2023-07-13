@@ -358,6 +358,31 @@ router.post('/playlist', async ctx => {
 	}
 });
 
+router.get('/user/:user_id', async ctx => {
+	const uid = ctx.params.user_id;
+	const UserLibrary = mongoose.model(uid, UserLibrarySchema);
+	const playlists = await UserLibrary.find({ type: 'playlist' });
+	const albums = await UserLibrary.find({ type: 'album' });
+	const result = {
+		playlists: [],
+		albums: []
+	};
+	for(let i = 0; i<playlists.length; i++){
+		const playlist = await PlaylistIndex.findOne({ pid: playlists[i].id });
+		if(playlist){
+			result.playlists.push(playlist);
+		}
+	}
+	for(let i = 0; i<albums.length; i++){
+		const album = await PlaylistIndex.findOne({ pid: albums[i].id });
+		if(album){
+			result.albums.push(album);
+		}
+	}
+	ctx.status = 200;
+	ctx.body = result;
+});
+
 app.use(router.routes());
 app.use(router.allowedMethods());
 

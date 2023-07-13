@@ -96,8 +96,8 @@ export default {
       return null;
     },
     albumImg() {
-      if (this.$store.state.curAlbum) {
-        return `http://127.0.0.1:3000/image/${this.$store.state.curAlbum.pid}.jpg`;
+      if (this.$store.state.curTrack) {
+        return `http://127.0.0.1:3000/image/${this.$store.state.curTrack.album_id}.jpg`;
       }
       return null;
     },

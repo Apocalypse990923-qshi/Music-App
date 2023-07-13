@@ -108,7 +108,7 @@ export default {
             // console.log('Login Success');
             this.successMessage = response.data.msg;
             this.successAlert = true;
-            this.$store.commit('setUser', response.data.user);
+            this.$store.commit('setUser', response.data.userInfo);
             this.$store.commit('setLoginFlag', true);
             this.$router.push('/explore');
           } else if (response.data.status === 1) {
