@@ -71,6 +71,7 @@ export default {
       albums: [],
     };
   },
+  // inject: ['setAudioSource'],
   methods: {
     fetchAlbums() {
       axios
@@ -91,6 +92,7 @@ export default {
         .get(url)
         .then((response) => {
           this.$store.commit('setCurTrack', response.data);
+          // this.setAudioSource(`http://127.0.0.1:3000/stream/${this.$store.state.curTrack.track_id}`);
           console.log('Got TrackInfo:', this.$store.state.curTrack);
         })
         .catch((error) => console.error(error));

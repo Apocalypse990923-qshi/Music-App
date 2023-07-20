@@ -19,8 +19,9 @@
       <v-card-text style="width: auto;">{{tracks.length}} songs</v-card-text>
       <v-spacer></v-spacer>
 
-      <v-btn icon>
-        <v-icon>mdi-heart</v-icon>
+      <v-btn @click="likeAlbum()" icon>
+        <v-icon v-if="!ifLiked">mdi-heart-outline</v-icon>
+        <v-icon v-if="ifLiked">mdi-heart</v-icon>
       </v-btn>
 
     </v-toolbar>
@@ -63,9 +64,29 @@
           <td class="text-center">{{ track.album }}</td>
           <td class="text-center">{{ getDuration(track.length) }}</td>
           <td class="text-center">
-            <v-btn icon>
-              <v-icon>mdi-heart-outline</v-icon>
-            </v-btn>
+            <v-menu
+              :offset-x=true
+            >
+              <template v-slot:activator="{ on, attrs }">
+                <v-btn
+                  v-bind="attrs"
+                  v-on="on"
+                icon>
+                  <v-icon>mdi-heart-outline</v-icon>
+                </v-btn>
+              </template>
+              <v-list>
+                <v-list-item
+                  v-for="(userPlaylist) in userPlaylists"
+                  :key="userPlaylist.pid"
+                >
+                  <v-list-item-title
+                    @click.stop="likeTrack(track.track_id, userPlaylist.pid)">
+                    {{ userPlaylist.name }}
+                  </v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
           </td>
           <td class="text-center">
             <v-btn @click="playAlbum(albumInfo, index)" icon>
@@ -76,6 +97,24 @@
       </tbody>
     </template>
   </v-simple-table>
+
+  <v-snackbar
+      v-model="snackbar"
+      :timeout=2000
+    >
+      {{ snackbarMsg }}
+
+      <template v-slot:action="{ attrs }">
+        <v-btn
+          color="blue"
+          text
+          v-bind="attrs"
+          @click="snackbar = false"
+        >
+          Close
+        </v-btn>
+      </template>
+    </v-snackbar>
 
   </v-card>
 </template>
@@ -96,11 +135,55 @@ export default {
 
   data() {
     return {
+      snackbar: false,
+      snackbarMsg: 'this is sanckbar message',
       backIconPath: mdiArrowLeft,
       tracks: [],
+      userAlbums: [],
+      userPlaylists: [],
+      ifLiked: false,
     };
   },
   methods: {
+    likeTrack(tid, pid) {
+      axios
+        .put(`http://127.0.0.1:3000/track/?user_id=${this.$store.state.user.uid}&pid=${pid}&tid=${tid}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        })
+        .then((response) => {
+          if (response.status === 200 && response.data.status === 0) {
+            console.log(response.data.msg);
+            this.snackbarMsg = response.data.msg;
+            this.snackbar = true;
+          }
+        })
+        .catch((error) => console.error(error));
+    },
+    isInUserLibrary() {
+      if (this.$store.state.user) {
+        axios
+          .get(`http://127.0.0.1:3000/user/${this.$store.state.user.uid}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`,
+            },
+          })
+          .then((response) => {
+            this.userAlbums = response.data.albums;
+            console.log(this.albums);
+            this.userPlaylists = response.data.playlists;
+            console.log(this.playlists);
+            for (let i = 0; i < this.userAlbums.length; i += 1) {
+              if (this.userAlbums[i].pid === this.id) {
+                this.ifLiked = true;
+                break;
+              }
+            }
+          })
+          .catch((error) => console.error(error));
+      }
+    },
     fetchTracks() {
       axios
         .get(`http://127.0.0.1:3000/getTracksByOrder/${this.id}`)
@@ -109,6 +192,37 @@ export default {
           console.log(this.tracks);
         })
         .catch((error) => console.error(error));
+    },
+    likeAlbum() {
+      if (this.ifLiked) {
+        axios
+          .delete(`http://127.0.0.1:3000/playlist/?user_id=${this.$store.state.user.uid}&pid=${this.id}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`,
+            },
+          })
+          .then((response) => {
+            if (response.status === 200) {
+              console.log(response.data.msg);
+              this.ifLiked = false;
+            }
+          })
+          .catch((error) => console.error(error));
+      } else {
+        axios
+          .put(`http://127.0.0.1:3000/playlist/?user_id=${this.$store.state.user.uid}&pid=${this.id}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`,
+            },
+          })
+          .then((response) => {
+            if (response.status === 200) {
+              console.log(response.data.msg);
+              this.ifLiked = true;
+            }
+          })
+          .catch((error) => console.error(error));
+      }
     },
     getDuration(time) {
       let seconds = Math.round(time);
@@ -136,6 +250,7 @@ export default {
     },
   },
   mounted() {
+    this.isInUserLibrary();
     this.fetchTracks();
   },
 };

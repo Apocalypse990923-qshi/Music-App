@@ -27,6 +27,7 @@
 
     <div style="position: fixed; bottom: 0; width: 100%;">
         <v-audio-player
+            ref="audioPlayer"
             :src="musicSrc"
             :track-title="trackTitle"
             :track-subtitle="trackSubtitle"
@@ -103,10 +104,21 @@ export default {
     },
   },
 
+  // provide() {
+  //   return {
+  //     setAudioSource: this.setAudioSource,
+  //   };
+  // },
+
   methods: {
+    setAudioSource(src) {
+      this.$refs.audioPlayer.source = src;
+    },
     logout() {
       this.$store.commit('setUser', null);
       this.$store.commit('setLoginFlag', false);
+      axios.defaults.headers.common.Authorization = null;
+      localStorage.removeItem('token');
       this.$router.push('/login');
     },
     playAlbum(album, order) { // play the track of the corresponding order in the album

@@ -10,72 +10,16 @@ import mongoose from 'mongoose';
 import { Library, User, PlaylistIndex, SinglePlaylistSchema, UserLibrarySchema } from './model.js';
 const key = 'password';
 
+import jwt from 'jsonwebtoken';
+import jwtMiddleware from 'koa-jwt';
+
+
 const app = new Koa();
 const router = new Router();
 
 app.use(bodyParser());
 app.use(cors());
-
-router.put('/playlist', async ctx => {
-	const user = ctx.query.user_id;
-	const pid = ctx.query.pid;
-	const UserLibrary = mongoose.model(user, UserLibrarySchema);
-	const playlist = await PlaylistIndex.findOne({ pid: pid });
-	if (playlist) {
-		if(await UserLibrary.findOne({ id: pid })){
-			ctx.status = 500;
-	        ctx.body = 'Playlist/album already exist in User Library';
-			return;
-		}
-		const data = {
-			type: playlist.type,
-			id: pid,
-			added_date: new Date().toISOString().substring(0,10),
-		};
-		const newUserLibrary = new UserLibrary(data);
-		await newUserLibrary.save().then(() => console.log('Playlist/album saved in UserLibrary')).catch(err => console.error('Error:', err));
-		ctx.body = { status: 0, msg: "Saved playlist/album in User Library Success" };
-    } else {
-        ctx.status = 404;
-        ctx.body = 'No playlist/album found';
-    }
-});
-
-router.put('/track', async ctx => {
-	const user = ctx.query.user_id;
-	const pid = ctx.query.pid;
-	const tid = ctx.query.tid;
-	const UserLibrary = mongoose.model(user, UserLibrarySchema);
-	const playlist = await PlaylistIndex.findOne({ pid: pid });
-	if (playlist) {
-		if(await UserLibrary.findOne({ id: pid })){
-			const SinglePlaylist = mongoose.model(playlist.pid, SinglePlaylistSchema);
-			const track = await SinglePlaylist.findOne({ tid: tid });
-			if(!track){
-				const new_track = {
-			        tid: tid,
-					order: playlist.added
-			    };
-				const NewTrack = new SinglePlaylist(new_track);
-				NewTrack.save().then(() => console.log('New track saved in playlist')).catch(err => console.error('Error:', err));
-				playlist.added = playlist.added + 1;
-				playlist.save().then(() => console.log('Playlist updated')).catch(err => console.error('Error:', err));
-				ctx.body = { status: 0, msg: "Saved track in playlist Success" };
-			}else{
-				ctx.status = 500;
-		        ctx.body = 'Track already exist in playlist';
-				return;
-	        }
-		}else{
-			ctx.status = 500;
-	        ctx.body = 'Playlist does not exist in User Library';
-			return;
-		}
-	} else {
-		ctx.status = 404;
-        ctx.body = 'No playlist found';
-	}
-});
+//app.use(jwtMiddleware({ secret: key }).unless({ path: [/^\/signup/, /^\/login/] }));
 
 router.get('/stream/:track_id', async (ctx) => {
   const trackId = ctx.params.track_id;
@@ -271,10 +215,12 @@ router.post('/login', async ctx => {
       let originalPassword = bytes.toString(CryptoJS.enc.Utf8);
 
       if(originalPassword === userData.secret) {
+		const token = jwt.sign({ userId: userData.uid }, key, { expiresIn: '1h' });
         ctx.body = {
           "status": 0,
           "msg": "Login Success!",
-		  "userInfo": userData
+		  "userInfo": userData,
+		  "token": token
         };
       } else {
         ctx.body = {
@@ -315,7 +261,68 @@ router.post('/signup', async ctx => {
     }
 });
 
-router.post('/playlist', async ctx => {
+router.put('/playlist', jwtMiddleware({ secret: key }), async ctx => {
+	const user = ctx.query.user_id;
+	const pid = ctx.query.pid;
+	const UserLibrary = mongoose.model(user, UserLibrarySchema);
+	const playlist = await PlaylistIndex.findOne({ pid: pid });
+	if (playlist) {
+		if(await UserLibrary.findOne({ id: pid })){
+			ctx.status = 500;
+	        ctx.body = 'Playlist/album already exist in User Library';
+			return;
+		}
+		const data = {
+			type: playlist.type,
+			id: pid,
+			added_date: new Date().toISOString().substring(0,10),
+		};
+		const newUserLibrary = new UserLibrary(data);
+		await newUserLibrary.save().then(() => console.log('Playlist/album saved in UserLibrary')).catch(err => console.error('Error:', err));
+		ctx.body = { status: 0, msg: "Saved playlist/album in User Library Success" };
+    } else {
+        ctx.status = 404;
+        ctx.body = 'No playlist/album found';
+    }
+});
+
+router.put('/track', jwtMiddleware({ secret: key }), async ctx => {
+	const user = ctx.query.user_id;
+	const pid = ctx.query.pid;
+	const tid = ctx.query.tid;
+	const UserLibrary = mongoose.model(user, UserLibrarySchema);
+	const playlist = await PlaylistIndex.findOne({ pid: pid });
+	if (playlist) {
+		if(await UserLibrary.findOne({ id: pid })){
+			const SinglePlaylist = mongoose.model(playlist.pid, SinglePlaylistSchema);
+			const track = await SinglePlaylist.findOne({ tid: tid });
+			if(!track){
+				const new_track = {
+			        tid: tid,
+					order: playlist.added
+			    };
+				const NewTrack = new SinglePlaylist(new_track);
+				NewTrack.save().then(() => console.log('New track saved in playlist')).catch(err => console.error('Error:', err));
+				playlist.added = playlist.added + 1;
+				playlist.save().then(() => console.log('Playlist updated')).catch(err => console.error('Error:', err));
+				ctx.body = { status: 0, msg: "Saved track in playlist Success" };
+			}else{
+				ctx.status = 500;
+		        ctx.body = 'Track already exist in playlist';
+				return;
+	        }
+		}else{
+			ctx.status = 500;
+	        ctx.body = 'Playlist does not exist in User Library';
+			return;
+		}
+	} else {
+		ctx.status = 404;
+        ctx.body = 'No playlist found';
+	}
+});
+
+router.post('/playlist', jwtMiddleware({ secret: key }), async ctx => {
 	const user = ctx.query.user_id;
 	const name = ctx.query.name;
 	const playlist_id = crypto.createHash('md5').update(user+name).digest('hex').substring(0, 16);
@@ -358,7 +365,65 @@ router.post('/playlist', async ctx => {
 	}
 });
 
-router.get('/user/:user_id', async ctx => {
+router.delete('/playlist', jwtMiddleware({ secret: key }), async ctx => {
+	const user = ctx.query.user_id;
+	const pid = ctx.query.pid;
+	const UserLibrary = mongoose.model(user, UserLibrarySchema);
+	const playlist = await PlaylistIndex.findOne({ pid: pid });
+	if (playlist) {
+		if(!await UserLibrary.findOne({ id: pid })){
+			ctx.status = 500;
+	        ctx.body = 'Playlist/album does not exist in User Library';
+			return;
+		}
+		await UserLibrary.deleteOne({ id: pid }).then(() => {
+			console.log('Playlist/album removed from UserLibrary');
+		}).catch(err => {
+			console.error('Error:', err);
+		});
+		ctx.body = { status: 0, msg: "Removed playlist/album from User Library successfully" };
+	} else {
+		ctx.status = 404;
+        ctx.body = 'No playlist/album found';
+	}
+});
+
+router.delete('/track', jwtMiddleware({ secret: key }), async ctx => {
+	const user = ctx.query.user_id;
+	const pid = ctx.query.pid;
+	const tid = ctx.query.tid;
+	const UserLibrary = mongoose.model(user, UserLibrarySchema);
+	const playlist = await PlaylistIndex.findOne({ pid: pid });
+	if (playlist) {
+		if(await UserLibrary.findOne({ id: pid })){
+			const SinglePlaylist = mongoose.model(playlist.pid, SinglePlaylistSchema);
+			const track = await SinglePlaylist.findOne({ tid: tid });
+			if(track){
+				await SinglePlaylist.deleteOne({ tid: tid }).then(() => {
+					console.log('Track removed from playlist of UserLibrary');
+				}).catch(err => {
+					console.error('Error:', err);
+				});
+				playlist.added = playlist.added - 1;
+				playlist.save().then(() => console.log('Playlist updated')).catch(err => console.error('Error:', err));
+				ctx.body = { status: 0, msg: "Removed track from playlist Success" };
+			}else{
+				ctx.status = 500;
+		        ctx.body = 'Track does not exist in playlist';
+				return;
+	        }
+		}else{
+			ctx.status = 500;
+	        ctx.body = 'Playlist does not exist in User Library';
+			return;
+		}
+	} else {
+		ctx.status = 404;
+        ctx.body = 'No playlist found';
+	}
+})
+
+router.get('/user/:user_id', jwtMiddleware({ secret: key }), async ctx => {
 	const uid = ctx.params.user_id;
 	const UserLibrary = mongoose.model(uid, UserLibrarySchema);
 	const playlists = await UserLibrary.find({ type: 'playlist' });

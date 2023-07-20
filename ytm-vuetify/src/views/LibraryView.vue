@@ -1,8 +1,17 @@
 <template>
 <v-sheet
     class="mx-auto"
+    style="padding-bottom:100px;"
 >
-<v-banner shaped><span style="font-size:20pt;">{{user}}'s Library</span></v-banner>
+  <v-toolbar>
+    <v-btn icon style="margin-right:20px;" @click="goBack">
+        <svg-icon type="mdi" :path="backIconPath"></svg-icon>
+    </v-btn>
+    <span style="font-size:20pt;">{{user}}'s Library</span>
+  </v-toolbar>
+<v-banner shaped>
+  <span style="font-size:15pt;">Albums</span>
+</v-banner>
 <v-slide-group
       v-model="model"
       active-class="success"
@@ -29,8 +38,18 @@
         </v-card>
     </v-slide-item>
 </v-slide-group>
-
+<v-btn
+    color="primary"
+    elevation="5"
+    x-large
+    style="margin:20px;"
+    @click="goBack()"
+  >Explore</v-btn>
 <v-divider></v-divider>
+
+<v-banner shaped>
+  <span style="font-size:15pt;">Playlists</span>
+</v-banner>
 
 <v-slide-group
       v-model="model"
@@ -58,14 +77,49 @@
         </v-card>
     </v-slide-item>
 </v-slide-group>
-
+<v-dialog
+      v-model="dialog"
+      width="500"
+>
+  <template v-slot:activator="{ on, attrs }">
+    <v-btn
+      color="primary"
+      elevation="5"
+      v-bind="attrs"
+      v-on="on"
+      x-large
+      style="margin:20px;"
+    >Create</v-btn>
+  </template>
+  <v-card>
+        <v-card-title class="text-h5">
+          Name the new Playlist
+        </v-card-title>
+        <v-text-field
+          v-model="playlistName"
+          label="name"
+          required
+          style="margin-left:25px;margin-right:25px;"
+        ></v-text-field>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn
+            color="primary"
+            text
+            @click="dialog = false;createPlaylist()"
+          >
+            Continue
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+</v-dialog>
 </v-sheet>
 </template>
 
 <script>
 import axios from 'axios';
 import SvgIcon from '@jamescoyle/vue-icon';
-import { mdiPlay, mdiPause } from '@mdi/js';
+import { mdiPlay, mdiPause, mdiArrowLeft } from '@mdi/js';
 
 export default {
   name: 'LibraryView',
@@ -84,6 +138,8 @@ export default {
 
   data() {
     return {
+      dialog: false,
+      backIconPath: mdiArrowLeft,
       playIconPath: mdiPlay,
       pauseIconPath: mdiPause,
       albums: null,
@@ -93,7 +149,11 @@ export default {
   methods: {
     fetchUserLibrary() {
       axios
-        .get(`http://127.0.0.1:3000/user/${this.id}`)
+        .get(`http://127.0.0.1:3000/user/${this.id}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        })
         .then((response) => {
           this.albums = response.data.albums;
           console.log(this.albums);
@@ -118,9 +178,28 @@ export default {
     },
     openAlbum(album) {
       if (album.type === 'playlist') {
-        this.$router.push({ name: 'playlist', params: { id: album.pid, albumInfo: album } });
+        this.$router.push({ name: 'playlist', params: { id: album.pid, playlistInfo: album } });
+        return;
       }
       this.$router.push({ name: 'album', params: { id: album.pid, albumInfo: album } });
+    },
+    goBack() {
+      this.$router.push('/explore');
+    },
+    createPlaylist() {
+      // console.log('Create new Playlist!', this.playlistName);
+      axios
+        .post(`http://127.0.0.1:3000/playlist/?user_id=${this.$store.state.user.uid}&name=${this.playlistName}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        })
+        .then((response) => {
+          if (response.status === 200 && response.data.status === 0) {
+            console.log('Created new playlist in User Library Success');
+          }
+        })
+        .catch((error) => console.error(error));
     },
   },
   mounted() {

@@ -110,6 +110,8 @@ export default {
             this.successAlert = true;
             this.$store.commit('setUser', response.data.userInfo);
             this.$store.commit('setLoginFlag', true);
+            localStorage.setItem('token', response.data.token);
+            axios.defaults.headers.common.Authorization = `Bearer ${localStorage.getItem('token')}`;
             this.$router.push('/explore');
           } else if (response.data.status === 1) {
             // console.log('Login Fail');
