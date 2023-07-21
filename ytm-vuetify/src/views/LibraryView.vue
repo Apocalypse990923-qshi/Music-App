@@ -113,6 +113,23 @@
         </v-card-actions>
       </v-card>
 </v-dialog>
+<v-snackbar
+      v-model="snackbar"
+      :timeout=2000
+  >
+      {{ snackbarMsg }}
+
+      <template v-slot:action="{ attrs }">
+        <v-btn
+          color="blue"
+          text
+          v-bind="attrs"
+          @click="snackbar = false"
+        >
+          Close
+        </v-btn>
+      </template>
+  </v-snackbar>
 </v-sheet>
 </template>
 
@@ -138,6 +155,8 @@ export default {
 
   data() {
     return {
+      snackbar: false,
+      snackbarMsg: 'this is sanckbar message',
       dialog: false,
       backIconPath: mdiArrowLeft,
       playIconPath: mdiPlay,
@@ -197,6 +216,8 @@ export default {
         .then((response) => {
           if (response.status === 200 && response.data.status === 0) {
             console.log('Created new playlist in User Library Success');
+            this.snackbarMsg = 'Created new playlist in User Library Success';
+            this.snackbar = true;
           }
         })
         .catch((error) => console.error(error));

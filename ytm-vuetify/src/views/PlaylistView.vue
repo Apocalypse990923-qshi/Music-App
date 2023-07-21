@@ -155,6 +155,8 @@ export default {
             if (response.status === 200) {
               console.log(response.data.msg);
               this.ifLiked = false;
+              this.snackbarMsg = response.data.msg;
+              this.snackbar = true;
             }
           })
           .catch((error) => console.error(error));
@@ -169,6 +171,8 @@ export default {
             if (response.status === 200) {
               console.log(response.data.msg);
               this.ifLiked = true;
+              this.snackbarMsg = response.data.msg;
+              this.snackbar = true;
             }
           })
           .catch((error) => console.error(error));
