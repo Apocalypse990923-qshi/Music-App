@@ -24,12 +24,16 @@ Functions of User Library includes
 # Technology Stack
 ## Frontend
 Vue.js
+
 Vuetify2
 
 ## Backend
 Node.js
+
 Koa Web Framework 
+
 JWT(JSON Web Token)
+
 Mongoose
 
 ## Databse
