@@ -7,6 +7,9 @@ sending request to backend server with Axois. The Backend is established using N
 which mainly responds with the RESTful API, such as audio source of track, cover image of album, and requests to interact with user library etc. 
 The data is stored in Mongo Database, including tracks, albums and user information. The backend node.js use Mongoose to interact with MongoDB and edit the data.
 
+Thanks for the template of vuetify-audio-player provided by WoodyDark
+https://github.com/WoodyDark/vuetify-audio-player
+
 Functions of User Library includes
 1. User Login/New user Signup
 2. Add/Remove album
